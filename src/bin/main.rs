@@ -1,20 +1,25 @@
 use std::fs;
 use std::io::prelude::*;
 use std::net::{TcpListener, TcpStream};
+use rust_final_project::ThreadPool;
 
 fn main() {
     let listener = match TcpListener::bind("127.0.0.1:7878") {
         Ok(l) => l,
         Err(err) => {
             eprintln!("Failed to bind port: {}", err);
-            return ();
+            return;
         }
     };
+
+    let pool = ThreadPool::new(5).unwrap();
 
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                handle_connection(stream);
+                pool.execute(|| {
+                    handle_connection(stream);
+                });
             }
             Err(err) => {
                 eprintln!("Stream error: {}", err);
@@ -30,7 +35,7 @@ fn handle_connection(mut stream: TcpStream) {
 
     match stream.read(&mut buffer) {
         Ok(read) => {
-            println!("Read {} bytes:\n{}", read, String::from_utf8_lossy(&buffer[..]).split("\n").map(|l| format!(" < {}\n", l)).collect::<String>());
+            println!("Read {} bytes:\n{}", read, String::from_utf8_lossy(&buffer[..]).split('\n').map(|l| format!(" < {}\n", l)).collect::<String>());
         }
         Err(err) => {
             eprintln!("Read error: {}", err);
